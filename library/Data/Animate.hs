@@ -2,7 +2,7 @@ module Data.Animate
   ( Seconds
   , DeltaSeconds
   , Frame(..)
-  
+
   , KeyFrames
   , keyFrames
   , framesByKeyFrame
@@ -37,6 +37,6 @@ data Position kf = Position
   } deriving (Show, Eq)
 
 data Loop
-  = Loop
-  | NoLoop
+  = LoopForever
+  | LoopCount Int
   deriving (Show, Eq)

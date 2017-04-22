@@ -1,0 +1,38 @@
+name: animate
+version: '0.0.0'
+category: Other
+synopsis: Keyframe animation
+description: Provides prototypical keyframe animation with type-safety.
+maintainer: Joe Vargas
+extra-source-files:
+- package.yaml
+- README.md
+- stack.yaml
+ghc-options: -Wall
+default-extensions:
+- DuplicateRecordFields
+- FlexibleContexts
+- FlexibleInstances
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- NamedFieldPuns
+- ScopedTypeVariables
+library:
+  dependencies:
+  - base
+  - vector
+  source-dirs: library
+tests:
+  up-down-left-right-test-suite:
+    dependencies:
+    - base
+    - animate
+    - fixie
+    - hspec
+    - vector
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    main: Main.hs
+    source-dirs: test-suite

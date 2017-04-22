@@ -1,0 +1,7 @@
+resolver: lts-8.11
+packages:
+- '.'
+extra-deps:
+- fixie-1.0.0
+flags: {}
+extra-package-dbs: []

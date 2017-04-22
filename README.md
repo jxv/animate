@@ -1,2 +1,2 @@
-# animation
+# animate
 keyframe animation

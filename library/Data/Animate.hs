@@ -10,6 +10,7 @@ module Data.Animate
   , Position(..)
   , FrameStep(..)
   , stepFrame
+  , stepWithLoop
 
   , Loop(..)
   ) where
@@ -24,7 +25,7 @@ data Frame loc = Frame
   , _fSeconds :: Seconds
   } deriving (Show, Eq)
 
-newtype KeyFrames kf loc = KeyFrames (V.Vector (V.Vector (Frame loc)))
+newtype KeyFrames kf loc = KeyFrames { unKeyFrames :: V.Vector (V.Vector (Frame loc)) }
   deriving (Show, Eq)
 
 keyFrames :: (Enum kf, Bounded kf) => (kf -> [Frame loc]) -> KeyFrames kf loc
@@ -51,6 +52,17 @@ stepFrame Frame{_fSeconds} Position{_pCounter} delta = let
   counter = if completion then 0 else _pCounter + delta
   delta' = if completion then _pCounter + delta - _fSeconds else 0
   in FrameStep completion counter delta'
+
+stepWithLoop :: Enum kf => KeyFrames kf loc -> Position kf -> DeltaSeconds -> Position kf
+stepWithLoop kfs p d =
+  if _fsFrameCompletion 
+    then stepWithLoop kfs p' _fsRemainingDelta
+    else p{_pCounter = _fsCounter}
+  where
+    FrameStep{_fsFrameCompletion, _fsCounter, _fsRemainingDelta} = stepFrame f p d
+    fs = unKeyFrames kfs V.! fromEnum (_pKeyFrame p)
+    f = fs V.! _pFrameIndex p
+    p' = p{_pFrameIndex = (_pFrameIndex p + 1) `mod` V.length fs, _pCounter = 0}
 
 data Loop
   = LoopForever

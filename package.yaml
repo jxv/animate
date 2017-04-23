@@ -27,7 +27,6 @@ tests:
     dependencies:
     - base
     - animate
-    - fixie
     - hspec
     - vector
     ghc-options:

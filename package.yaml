@@ -23,7 +23,7 @@ library:
   - vector
   source-dirs: library
 tests:
-  up-down-left-right-test-suite:
+  animate-test-suite:
     dependencies:
     - base
     - animate

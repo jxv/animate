@@ -7,7 +7,10 @@ module Data.Animate
   , keyFrames
   , framesByKeyFrame
 
-  , Position
+  , Position(..)
+  , FrameStep(..)
+  , stepFrame
+
   , Loop(..)
   ) where
 
@@ -17,8 +20,8 @@ type Seconds = Float
 type DeltaSeconds = Seconds
 
 data Frame loc = Frame
-  { _location :: loc
-  , _seconds :: Seconds
+  { _fLocation :: loc
+  , _fSeconds :: Seconds
   } deriving (Show, Eq)
 
 newtype KeyFrames kf loc = KeyFrames (V.Vector (V.Vector (Frame loc)))
@@ -27,14 +30,27 @@ newtype KeyFrames kf loc = KeyFrames (V.Vector (V.Vector (Frame loc)))
 keyFrames :: (Enum kf, Bounded kf) => (kf -> [Frame loc]) -> KeyFrames kf loc
 keyFrames getFrames = KeyFrames $ V.fromList $ map (V.fromList . getFrames) [minBound..maxBound]
 
-framesByKeyFrame :: (Enum kf, Bounded kf) => KeyFrames kf loc -> kf -> V.Vector (Frame loc)
+framesByKeyFrame :: Enum kf => KeyFrames kf loc -> kf -> V.Vector (Frame loc)
 framesByKeyFrame (KeyFrames kfs) kf = kfs V.! fromEnum kf
 
 data Position kf = Position
-  { _keyFrame :: kf
-  , _frameIndex :: Int
-  , _counter :: Seconds
+  { _pKeyFrame :: kf
+  , _pFrameIndex :: Int
+  , _pCounter :: Seconds
   } deriving (Show, Eq)
+
+data FrameStep = FrameStep
+  { _fsFrameCompletion :: Bool
+  , _fsCounter :: Seconds
+  , _fsRemainingDelta :: DeltaSeconds
+  } deriving (Show, Eq)
+
+stepFrame :: Frame loc -> Position kf -> DeltaSeconds -> FrameStep
+stepFrame Frame{_fSeconds} Position{_pCounter} delta = let
+  completion = _pCounter + delta >= _fSeconds
+  counter = if completion then 0 else _pCounter + delta
+  delta' = if completion then _pCounter + delta - _fSeconds else 0
+  in FrameStep completion counter delta'
 
 data Loop
   = LoopForever

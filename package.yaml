@@ -35,3 +35,4 @@ tests:
     - -with-rtsopts=-N
     main: Main.hs
     source-dirs: test-suite
+github: jxv/animate

@@ -2,17 +2,14 @@ module Data.Animate
   ( Seconds
   , DeltaSeconds
   , Frame(..)
-
   , KeyFrames
   , keyFrames
   , framesByKeyFrame
-
+  , Loop(..)
   , Position(..)
   , FrameStep(..)
   , stepFrame
-  , stepWithLoop
-
-  , Loop(..)
+  , step
   ) where
 
 import qualified Data.Vector as V (Vector, (!), length, fromList)
@@ -34,10 +31,16 @@ keyFrames getFrames = KeyFrames $ V.fromList $ map (V.fromList . getFrames) [min
 framesByKeyFrame :: Enum kf => KeyFrames kf loc -> kf -> V.Vector (Frame loc)
 framesByKeyFrame (KeyFrames kfs) kf = kfs V.! fromEnum kf
 
+data Loop
+  = LoopForever
+  | LoopCount Int
+  deriving (Show, Eq)
+
 data Position kf = Position
   { _pKeyFrame :: kf
   , _pFrameIndex :: Int
   , _pCounter :: Seconds
+  , _pLoop :: Loop
   } deriving (Show, Eq)
 
 data FrameStep = FrameStep
@@ -53,18 +56,22 @@ stepFrame Frame{_fSeconds} Position{_pCounter} delta = let
   delta' = if completion then _pCounter + delta - _fSeconds else 0
   in FrameStep completion counter delta'
 
-stepWithLoop :: Enum kf => KeyFrames kf loc -> Position kf -> DeltaSeconds -> Position kf
-stepWithLoop kfs p d =
+step :: Enum kf => KeyFrames kf loc -> Position kf -> DeltaSeconds -> Position kf
+step kfs p d =
   if _fsFrameCompletion 
-    then stepWithLoop kfs p' _fsRemainingDelta
+    then step kfs p' _fsRemainingDelta
     else p{_pCounter = _fsCounter}
   where
     FrameStep{_fsFrameCompletion, _fsCounter, _fsRemainingDelta} = stepFrame f p d
     fs = unKeyFrames kfs V.! fromEnum (_pKeyFrame p)
     f = fs V.! _pFrameIndex p
-    p' = p{_pFrameIndex = (_pFrameIndex p + 1) `mod` V.length fs, _pCounter = 0}
+    p'= case _pLoop p of
+      LoopForever -> p{_pFrameIndex = (_pFrameIndex p + 1) `mod` V.length fs, _pCounter = 0}
+      LoopCount n -> let
+        index = (_pFrameIndex p + 1) `mod` V.length fs
+        n' = if index == 0 then n - 1 else n
+        in p
+          { _pFrameIndex = if n' < 0 then _pFrameIndex p else index
+          , _pCounter = 0
+          , _pLoop = LoopCount n' }
 
-data Loop
-  = LoopForever
-  | LoopCount Int
-  deriving (Show, Eq)

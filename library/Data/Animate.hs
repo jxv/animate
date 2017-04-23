@@ -9,7 +9,7 @@ module Data.Animate
   , Position(..)
   , FrameStep(..)
   , stepFrame
-  , step
+  , stepKeyFrame
   ) where
 
 import qualified Data.Vector as V (Vector, (!), length, fromList)
@@ -56,10 +56,10 @@ stepFrame Frame{_fSeconds} Position{_pCounter} delta = let
   delta' = if completion then _pCounter + delta - _fSeconds else 0
   in FrameStep completion counter delta'
 
-step :: Enum kf => KeyFrames kf loc -> Position kf -> DeltaSeconds -> Position kf
-step kfs p d =
+stepKeyFrame :: Enum kf => KeyFrames kf loc -> Position kf -> DeltaSeconds -> Position kf
+stepKeyFrame kfs p d =
   if _fsFrameCompletion 
-    then step kfs p' _fsRemainingDelta
+    then stepKeyFrame kfs p' _fsRemainingDelta
     else p{_pCounter = _fsCounter}
   where
     FrameStep{_fsFrameCompletion, _fsCounter, _fsRemainingDelta} = stepFrame f p d

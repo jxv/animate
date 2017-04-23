@@ -25,19 +25,19 @@ spec = do
       _fsFrameCompletion actual `shouldBe` _fsFrameCompletion expected
       _fsCounter actual `shouldBe` _fsCounter expected
       _fsRemainingDelta actual `shouldSatisfy` (\rd -> 1e6 > abs (rd - _fsRemainingDelta expected))
-  describe "step" $ do
+  describe "stepKeyFrame" $ do
     let getFrames KeyFrame0Stand = [Frame 'a' 0.2, Frame 'b' 0.2]
         getFrames KeyFrame0Walk = [Frame 'c' 0.2, Frame 'd' 0.2]
     let kfs = keyFrames getFrames
     let p = Position { _pKeyFrame = KeyFrame0Stand, _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopForever }
     it "should do nothing if given 0 delta seconds" $ do
-      step kfs p 0 `shouldBe` p
+      stepKeyFrame kfs p 0 `shouldBe` p
     it "should go to the next frame" $ do
-      step kfs p 0.2 `shouldBe` p { _pFrameIndex = 1, _pCounter = 0 }
+      stepKeyFrame kfs p 0.2 `shouldBe` p { _pFrameIndex = 1, _pCounter = 0 }
     it "should loop to the start" $ do
-      step kfs p 0.4 `shouldBe` p { _pFrameIndex = 0, _pCounter = 0 }
+      stepKeyFrame kfs p 0.4 `shouldBe` p { _pFrameIndex = 0, _pCounter = 0 }
     it "should loop once" $ do
-      step kfs p{ _pLoop = LoopCount 1 } 0.4 `shouldBe` p { _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount 0 }
+      stepKeyFrame kfs p{ _pLoop = LoopCount 1 } 0.4 `shouldBe` p { _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount 0 }
     it "should not loop" $ do
-      step kfs p{ _pLoop = LoopCount 0 } 0.4 `shouldBe` p { _pFrameIndex = 1, _pCounter = 0, _pLoop = LoopCount (-1) }
+      stepKeyFrame kfs p{ _pLoop = LoopCount 0 } 0.4 `shouldBe` p { _pFrameIndex = 1, _pCounter = 0, _pLoop = LoopCount (-1) }
 

@@ -2,14 +2,14 @@ module Data.Animate
   ( Seconds
   , DeltaSeconds
   , Frame(..)
-  , KeyFrames
+  , Animations
   , keyFrames
-  , framesByKeyFrame
+  , framesByAnimation
   , Loop(..)
   , Position(..)
   , FrameStep(..)
   , stepFrame
-  , stepKeyFrame
+  , stepAnimation
   ) where
 
 import qualified Data.Vector as V (Vector, (!), length, fromList)
@@ -22,22 +22,22 @@ data Frame loc = Frame
   , _fSeconds :: Seconds
   } deriving (Show, Eq)
 
-newtype KeyFrames kf loc = KeyFrames { unKeyFrames :: V.Vector (V.Vector (Frame loc)) }
+newtype Animations a loc = Animations { unAnimations :: V.Vector (V.Vector (Frame loc)) }
   deriving (Show, Eq)
 
-keyFrames :: (Enum kf, Bounded kf) => (kf -> [Frame loc]) -> KeyFrames kf loc
-keyFrames getFrames = KeyFrames $ V.fromList $ map (V.fromList . getFrames) [minBound..maxBound]
+keyFrames :: (Enum a, Bounded a) => (a -> [Frame loc]) -> Animations a loc
+keyFrames getFrames = Animations $ V.fromList $ map (V.fromList . getFrames) [minBound..maxBound]
 
-framesByKeyFrame :: Enum kf => KeyFrames kf loc -> kf -> V.Vector (Frame loc)
-framesByKeyFrame (KeyFrames kfs) kf = kfs V.! fromEnum kf
+framesByAnimation :: Enum a => Animations a loc -> a -> V.Vector (Frame loc)
+framesByAnimation (Animations as) a = as V.! fromEnum a
 
 data Loop
   = LoopForever
   | LoopCount Int
   deriving (Show, Eq)
 
-data Position kf = Position
-  { _pKeyFrame :: kf
+data Position a = Position
+  { _pAnimation :: a
   , _pFrameIndex :: Int
   , _pCounter :: Seconds
   , _pLoop :: Loop
@@ -49,21 +49,21 @@ data FrameStep = FrameStep
   , _fsRemainingDelta :: DeltaSeconds
   } deriving (Show, Eq)
 
-stepFrame :: Frame loc -> Position kf -> DeltaSeconds -> FrameStep
+stepFrame :: Frame loc -> Position a -> DeltaSeconds -> FrameStep
 stepFrame Frame{_fSeconds} Position{_pCounter} delta = let
   completion = _pCounter + delta >= _fSeconds
   counter = if completion then 0 else _pCounter + delta
   delta' = if completion then _pCounter + delta - _fSeconds else 0
   in FrameStep completion counter delta'
 
-stepKeyFrame :: Enum kf => KeyFrames kf loc -> Position kf -> DeltaSeconds -> Position kf
-stepKeyFrame kfs p d =
+stepAnimation :: Enum a => Animations a loc -> Position a -> DeltaSeconds -> Position a
+stepAnimation as p d =
   if _fsFrameCompletion 
-    then stepKeyFrame kfs p' _fsRemainingDelta
+    then stepAnimation as p' _fsRemainingDelta
     else p{_pCounter = _fsCounter}
   where
     FrameStep{_fsFrameCompletion, _fsCounter, _fsRemainingDelta} = stepFrame f p d
-    fs = unKeyFrames kfs V.! fromEnum (_pKeyFrame p)
+    fs = unAnimations as V.! fromEnum (_pAnimation p)
     f = fs V.! _pFrameIndex p
     p'= case _pLoop p of
       LoopForever -> p{_pFrameIndex = (_pFrameIndex p + 1) `mod` V.length fs, _pCounter = 0}
@@ -74,4 +74,3 @@ stepKeyFrame kfs p d =
           { _pFrameIndex = if n' < 0 then _pFrameIndex p else index
           , _pCounter = 0
           , _pLoop = LoopCount n' }
-

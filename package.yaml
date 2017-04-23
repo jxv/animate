@@ -1,8 +1,8 @@
 name: animate
 version: '0.0.0'
 category: Other
-synopsis: Keyframe animation
-description: Provides prototypical keyframe animation with type-safety.
+synopsis: Animation for sprites
+description: Prototypical sprite animation with type-safety.
 maintainer: Joe Vargas
 extra-source-files:
 - package.yaml

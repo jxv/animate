@@ -27,7 +27,7 @@ data Frame loc = Frame
   , _fDelay :: Seconds -- ^ Minimium amount of time for the frame to last.
   } deriving (Show, Eq)
 
--- | Type safe animation set. Use an sum type with an `Enum` and `Bounded` instance for the animation `a`.
+-- | Type safe animation set. Use an sum type with an `Enum` and `Bounded` instance for the animation, 'a'.
 newtype Animations a loc = Animations { unAnimations :: V.Vector (V.Vector (Frame loc)) }
   deriving (Show, Eq)
 

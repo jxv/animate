@@ -19,7 +19,7 @@ default-extensions:
 - ScopedTypeVariables
 library:
   dependencies:
-  - base
+  - base >=4.7 && <5
   - vector
   source-dirs: library
 tests:
@@ -36,3 +36,4 @@ tests:
     main: Main.hs
     source-dirs: test-suite
 github: jxv/animate
+license: BSD3

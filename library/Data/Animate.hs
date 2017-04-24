@@ -45,16 +45,16 @@ data Loop
 
 -- | State for progression through an animation
 data Position a = Position
-  { _pAnimation :: a -- | Index for the animation.
-  , _pFrameIndex :: Int -- | Index wihin the animation. WARNING: Modifying to below zero or equal-to-or-greater-than-the-frame-count will throw out of bounds errors.
-  , _pCounter :: Seconds -- | Accumulated seconds to end of the frame. Will continue to compound if animation is completed.
-  , _pLoop :: Loop -- | How to loop through an animation. LoopCount is a count down.
+  { _pAnimation :: a -- ^ Index for the animation.
+  , _pFrameIndex :: Int -- ^ Index wihin the animation. WARNING: Modifying to below zero or equal-to-or-greater-than-the-frame-count will throw out of bounds errors.
+  , _pCounter :: Seconds -- ^ Accumulated seconds to end of the frame. Will continue to compound if animation is completed.
+  , _pLoop :: Loop -- ^ How to loop through an animation. LoopCount is a count down.
   } deriving (Show, Eq)
 
 -- | You can ignore. An intermediate type for `stepAnimation` to judge how to increment the current frame.
 data FrameStep
-  = FrameStepCounter Seconds -- | New counter to compare against the frame's delay.
-  | FrameStepDelta DeltaSeconds -- | How much delta to carry over into the next frame.
+  = FrameStepCounter Seconds -- ^ New counter to compare against the frame's delay.
+  | FrameStepDelta DeltaSeconds -- ^ How much delta to carry over into the next frame.
   deriving (Show, Eq)
 
 -- | Intermediate function for how a frame should be step through.

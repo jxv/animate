@@ -57,3 +57,12 @@ spec = do
     it "should be incomplete: frame isn't at the end and loop count is non-negative" $ do
       let p = Position { _pAnimation = Animation0Stand, _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount (-1) }
       isAnimationComplete as p `shouldBe` False
+  describe "positionHasLooped" $ do
+    it "should have looped" $ do
+      let p = Position { _pAnimation = Animation0Stand, _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount 0 }
+      let p' = Position { _pAnimation = Animation0Stand, _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount (-1) }
+      positionHasLooped p p' `shouldBe` True
+    it "should not have looped" $ do
+      let p = Position { _pAnimation = Animation0Stand, _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount 0 }
+      let p' = Position { _pAnimation = Animation0Stand, _pFrameIndex = 0, _pCounter = 0, _pLoop = LoopCount 0 }
+      positionHasLooped p p' `shouldBe` False

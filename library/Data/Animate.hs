@@ -11,14 +11,15 @@ module Data.Animate
   , stepFrame
   , stepAnimation
   , isAnimationComplete
+  , positionHasLooped
   ) where
 
 import qualified Data.Vector as V (Vector, (!), length, fromList)
 
--- | Avoided newtype wrapper for convenience (experimental)
+-- | Avoided newtype wrapper for convenience (tentative)
 type Seconds = Float
 
--- | Type aliased seconds (experimental)
+-- | Type aliased seconds (tentative)
 type DeltaSeconds = Seconds
 
 data Frame loc = Frame
@@ -94,3 +95,13 @@ isAnimationComplete as p = case _pLoop p of
     frames = framesByAnimation as (_pAnimation p)
     lastIndex = V.length frames - 1
     lastFrame = frames V.! lastIndex
+
+
+-- | Simple function diff'ing the position for loop change (tentative)
+positionHasLooped
+  :: Position a -- ^ Previous
+  -> Position a -- ^ Next
+  -> Bool
+positionHasLooped Position{ _pLoop = LoopCount c } Position{ _pLoop = LoopCount c' } = c > c'
+positionHasLooped Position{ _pLoop = LoopForever } _ = False
+positionHasLooped _ Position{ _pLoop = LoopForever } = False

@@ -1,6 +1,6 @@
 name: animate
 version: '0.0.0'
-category: Other
+category: Game
 synopsis: Animation for sprites
 description: Prototypical sprite animation with type-safety.
 maintainer: Joe Vargas

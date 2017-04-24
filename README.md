@@ -1,2 +1,2 @@
 # animate
-keyframe animation
+Animation for sprites

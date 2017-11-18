@@ -23,8 +23,8 @@ type Seconds = Float
 type DeltaSeconds = Seconds
 
 data Frame loc = Frame
-  { _fLocation :: loc -- ^ User defined reference to the location of a sprite. For example, a sprite sheet clip.
-  , _fDelay :: Seconds -- ^ Minimium amount of time for the frame to last.
+  { frameLocation :: loc -- ^ User defined reference to the location of a sprite. For example, a sprite sheet clip.
+  , frameDelay :: Seconds -- ^ Minimium amount of time for the frame to last.
   } deriving (Show, Eq)
 
 -- | Type safe animation set. Use an sum type with an `Enum` and `Bounded` instance for the animation, 'a'.
@@ -40,59 +40,59 @@ framesByAnimation :: Enum a => Animations a loc -> a -> V.Vector (Frame loc)
 framesByAnimation (Animations as) a = as V.! fromEnum a
 
 data Loop
-  = LoopForever -- ^ Never stop looping. Animation can never be completed.
-  | LoopCount Int -- ^ Count down loops to below zero. 0 = no loop. 1 = one loop. 2 = two loops. etc.
+  = Loop'Forever -- ^ Never stop looping. Animation can never be completed.
+  | Loop'Count Int -- ^ Count down loops to below zero. 0 = no loop. 1 = one loop. 2 = two loops. etc.
   deriving (Show, Eq)
 
 -- | State for progression through an animation
 data Position a = Position
-  { _pAnimation :: a -- ^ Index for the animation.
-  , _pFrameIndex :: Int -- ^ Index wihin the animation. WARNING: Modifying to below zero or equal-to-or-greater-than-the-frame-count will throw out of bounds errors.
-  , _pCounter :: Seconds -- ^ Accumulated seconds to end of the frame. Will continue to compound if animation is completed.
-  , _pLoop :: Loop -- ^ How to loop through an animation. LoopCount is a count down.
+  { positionAnimation :: a -- ^ Index for the animation.
+  , positionFrameIndex :: Int -- ^ Index wihin the animation. WARNING: Modifying to below zero or equal-to-or-greater-than-the-frame-count will throw out of bounds errors.
+  , positionCounter :: Seconds -- ^ Accumulated seconds to end of the frame. Will continue to compound if animation is completed.
+  , positionLoop :: Loop -- ^ How to loop through an animation. Loop'Count is a count down.
   } deriving (Show, Eq)
 
 -- | You can ignore. An intermediate type for `stepAnimation` to judge how to increment the current frame.
 data FrameStep
-  = FrameStepCounter Seconds -- ^ New counter to compare against the frame's delay.
-  | FrameStepDelta DeltaSeconds -- ^ How much delta to carry over into the next frame.
+  = FrameStep'Counter Seconds -- ^ New counter to compare against the frame's delay.
+  | FrameStep'Delta DeltaSeconds -- ^ How much delta to carry over into the next frame.
   deriving (Show, Eq)
 
 -- | Intermediate function for how a frame should be step through.
 stepFrame :: Frame loc -> Position a -> DeltaSeconds -> FrameStep
-stepFrame Frame{_fDelay} Position{_pCounter} delta = 
-  if _pCounter + delta >= _fDelay
-    then FrameStepDelta $ _pCounter + delta - _fDelay
-    else FrameStepCounter $ _pCounter + delta
+stepFrame Frame{frameDelay} Position{positionCounter} delta = 
+  if positionCounter + delta >= frameDelay
+    then FrameStep'Delta $ positionCounter + delta - frameDelay
+    else FrameStep'Counter $ positionCounter + delta
 
 -- | Step through the animation resulting in a new position.
 stepAnimation :: Enum a => Animations a loc -> Position a -> DeltaSeconds -> Position a
 stepAnimation as p d =
   case frameStep of
-    FrameStepCounter counter -> p{_pCounter = counter }
-    FrameStepDelta delta -> stepAnimation as p' delta
+    FrameStep'Counter counter -> p{positionCounter = counter }
+    FrameStep'Delta delta -> stepAnimation as p' delta
   where
     frameStep = stepFrame f p d
-    fs = unAnimations as V.! fromEnum (_pAnimation p)
-    f = fs V.! _pFrameIndex p
-    p'= case _pLoop p of
-      LoopForever -> p{_pFrameIndex = (_pFrameIndex p + 1) `mod` V.length fs, _pCounter = 0}
-      LoopCount n -> let
-        index = (_pFrameIndex p + 1) `mod` V.length fs
+    fs = unAnimations as V.! fromEnum (positionAnimation p)
+    f = fs V.! positionFrameIndex p
+    p'= case positionLoop p of
+      Loop'Forever -> p{positionFrameIndex = (positionFrameIndex p + 1) `mod` V.length fs, positionCounter = 0}
+      Loop'Count n -> let
+        index = (positionFrameIndex p + 1) `mod` V.length fs
         n' = if index == 0 then n - 1 else n
         in p
-          { _pFrameIndex = if n' < 0 then _pFrameIndex p else index
-          , _pCounter = 0
-          , _pLoop = LoopCount n' }
+          { positionFrameIndex = if n' < 0 then positionFrameIndex p else index
+          , positionCounter = 0
+          , positionLoop = Loop'Count n' }
 
 -- | The animation has finished all its frames. Useful for signalling into switching to another animation.
---   With a LoopForever, the animation will never be completed.
+--   With a Loop'Forever, the animation will never be completed.
 isAnimationComplete :: Enum a => Animations a loc -> Position a -> Bool
-isAnimationComplete as p = case _pLoop p of
-  LoopForever -> False
-  LoopCount n -> n < 0 && _pFrameIndex p == lastIndex && _pCounter p >= _fDelay lastFrame
+isAnimationComplete as p = case positionLoop p of
+  Loop'Forever -> False
+  Loop'Count n -> n < 0 && positionFrameIndex p == lastIndex && positionCounter p >= frameDelay lastFrame
   where
-    frames = framesByAnimation as (_pAnimation p)
+    frames = framesByAnimation as (positionAnimation p)
     lastIndex = V.length frames - 1
     lastFrame = frames V.! lastIndex
 
@@ -102,6 +102,6 @@ positionHasLooped
   :: Position a -- ^ Previous
   -> Position a -- ^ Next
   -> Bool
-positionHasLooped Position{ _pLoop = LoopCount c } Position{ _pLoop = LoopCount c' } = c > c'
-positionHasLooped Position{ _pLoop = LoopForever } _ = False
-positionHasLooped _ Position{ _pLoop = LoopForever } = False
+positionHasLooped Position{ positionLoop = Loop'Count c } Position{ positionLoop = Loop'Count c' } = c > c'
+positionHasLooped Position{ positionLoop = Loop'Forever } _ = False
+positionHasLooped _ Position{ positionLoop = Loop'Forever } = False

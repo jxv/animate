@@ -78,4 +78,4 @@ rectFromClip Ani.SpriteClip{scX,scY,scW,scH} = SDL.Rectangle (SDL.P (V2 (num scX
     num = fromIntegral
 
 delayMilliseconds :: Int -> IO ()
-delayMilliseconds ms = threadDelay (10000 * ms)
+delayMilliseconds ms = threadDelay (1000 * ms)

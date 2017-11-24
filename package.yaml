@@ -1,5 +1,5 @@
 name: animate
-version: '0.1.0'
+version: '0.2.0'
 category: Game
 synopsis: Animation for sprites
 description: Prototypical sprite animation with type-safety.
@@ -17,16 +17,23 @@ default-extensions:
 - LambdaCase
 - NamedFieldPuns
 - ScopedTypeVariables
+- OverloadedStrings
 library:
   dependencies:
   - base >=4.7 && <5
+  - aeson
+  - bytestring
+  - containers
+  - text
   - vector
   source-dirs: library
 tests:
   animate-test-suite:
     dependencies:
     - base
+    - aeson
     - animate
+    - containers
     - hspec
     - vector
     ghc-options:

@@ -9,7 +9,7 @@ module Data.Animate
   , Position(..)
   , FrameStep(..)
   , Key
-  , KeyName
+  , KeyName(..)
   , SpriteClip(..)
   , SpriteSheet(..)
   , SpriteSheetInfo(..)
@@ -24,6 +24,8 @@ module Data.Animate
   , positionHasLooped
   , currentFrame
   , currentLocation
+  , nextKey
+  , prevKey
   , readSpriteSheetInfoJSON
   , readSpriteSheetJSON
   ) where
@@ -31,8 +33,9 @@ module Data.Animate
 import qualified Data.Vector as V (Vector, (!), length, fromList)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as BL
+import Control.Applicative ((<|>))
 import Control.Monad (mzero)
-import Data.Aeson (FromJSON(..), ToJSON(..), (.:), decode, object, (.=), Value(..))
+import Data.Aeson (FromJSON(..), ToJSON(..), (.:), eitherDecode, object, (.=), Value(..))
 import Data.Map (Map)
 import Data.Word (Word8)
 import Data.Text (Text)
@@ -70,15 +73,23 @@ data SpriteClip = SpriteClip
   , scY :: Int
   , scW :: Int
   , scH :: Int
+  , scOffset :: Maybe (Int, Int)
   } deriving (Show, Eq)
 
 instance ToJSON SpriteClip where
-  toJSON SpriteClip{scX,scY,scW,scH} = toJSON (scX, scY, scW, scH)
+  toJSON SpriteClip{scX,scY,scW,scH,scOffset} = case scOffset of
+    Nothing -> toJSON (scX, scY, scW, scH)
+    Just (ofsX, ofsY) -> toJSON (scX, scY, scW, scH, ofsX, ofsY)
 
 instance FromJSON SpriteClip where
-  parseJSON v = do
-    (x,y,w,h) <- parseJSON v
-    return SpriteClip { scX = x, scY = y, scW = w, scH = h }
+  parseJSON v =
+    (do
+      (x,y,w,h) <- parseJSON v
+      return SpriteClip { scX = x, scY = y, scW = w, scH = h, scOffset = Nothing })
+    <|>
+    (do
+      (x,y,w,h,ofsX,ofsY) <- parseJSON v
+      return SpriteClip { scX = x, scY = y, scW = w, scH = h, scOffset = Just (ofsX, ofsY) })
 
 -- | Generalized sprite sheet data structure
 data SpriteSheet key img = SpriteSheet
@@ -203,6 +214,13 @@ isAnimationComplete as p = case pLoop p of
     lastIndex = V.length frames - 1
     lastFrame = frames V.! lastIndex
 
+-- | Cycle through the next animation key
+nextKey :: Key key => key -> key
+nextKey key = if key == maxBound then minBound else succ key
+
+-- | Cycle through the previous animation key
+prevKey :: Key key => key -> key
+prevKey key = if key == minBound then maxBound else pred key
 
 -- | Simple function diff'ing the position for loop change
 positionHasLooped
@@ -220,9 +238,9 @@ readSpriteSheetInfoJSON
   -> IO SpriteSheetInfo
 readSpriteSheetInfoJSON path = do
   metaBytes <- BL.readFile path
-  case decode metaBytes of
-    Nothing -> error $ "Cannot parse Sprite Sheet Info: " ++ path
-    Just ssi -> return ssi
+  case eitherDecode metaBytes of
+    Left _err -> error $ "Cannot parse Sprite Sheet Info \"" ++ path ++ "\""
+    Right ssi -> return ssi
 
 -- | Quick function for loading `SpriteSheetInfo`, then using it to load its image for a `SpriteSheet`
 -- | Check the example.

@@ -1,0 +1,40 @@
+name: animate-example
+version: '0.0.0'
+category: Game
+synopsis: Animation for sprites
+description: Prototypical sprite animation with type-safety.
+maintainer: Joe Vargas
+extra-source-files:
+- package.yaml
+- README.md
+- stack.yaml
+ghc-options: -Wall
+default-extensions:
+- DuplicateRecordFields
+- FlexibleContexts
+- FlexibleInstances
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- NamedFieldPuns
+- ScopedTypeVariables
+- OverloadedStrings
+executables:
+  animate-example:
+    dependencies:
+    - base >=4.7 && <5
+    - animate
+    - sdl2
+    - containers
+    - text
+    - aeson
+    - sdl2-image
+    - bytestring
+    - StateVar
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    main: Main.hs
+    source-dirs: .
+github: jxv/animate
+license: BSD3

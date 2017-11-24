@@ -37,10 +37,10 @@ import Data.Map (Map)
 import Data.Word (Word8)
 import Data.Text (Text)
 
--- | Avoided newtype wrapper for convenience (tentative)
+-- | Avoided newtype wrapper for convenience
 type Seconds = Float
 
--- | Type aliased seconds (tentative)
+-- | Type aliased seconds
 type DeltaSeconds = Seconds
 
 -- | Alias for RGB (8bit, 8bit, 8bit)
@@ -204,7 +204,7 @@ isAnimationComplete as p = case pLoop p of
     lastFrame = frames V.! lastIndex
 
 
--- | Simple function diff'ing the position for loop change (tentative)
+-- | Simple function diff'ing the position for loop change
 positionHasLooped
   :: Position key -- ^ Previous
   -> Position a -- ^ Next

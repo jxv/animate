@@ -4,7 +4,7 @@ import qualified SDL
 import qualified SDL.Image as Image
 import qualified Data.Animate as Ani
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Concurrent (threadDelay)
 import Data.StateVar (($=))
 import Foreign.C.Types
@@ -67,6 +67,7 @@ loop window screen ss@Ani.SpriteSheet{ssAnimations, ssImage} pos = do
   SDL.updateWindowSurface window
   delayMilliseconds frameDeltaMilliseconds
   let pos'' = if toNextKey then Ani.initPosition (Ani.nextKey (Ani.pKey pos')) else pos'
+  when toNextKey $ print $ Ani.keyName (Ani.pKey pos'')
   unless quit $ loop window screen ss pos''
   where
     frameDeltaSeconds = 0.016667

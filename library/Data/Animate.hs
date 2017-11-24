@@ -19,7 +19,7 @@ module Data.Animate
   , initPositionLoops
   , initPositionWithLoop
   , stepFrame
-  , stepAnimation
+  , stepPosition
   , isAnimationComplete
   , positionHasLooped
   , currentFrame
@@ -151,7 +151,7 @@ initPositionWithLoop key loop = Position
   , pLoop = loop
   }
 
--- | You can ignore. An intermediate type for `stepAnimation` to judge how to increment the current frame.
+-- | You can ignore. An intermediate type for `stepPosition` to judge how to increment the current frame.
 data FrameStep
   = FrameStep'Counter Seconds -- ^ New counter to compare against the frame's delay.
   | FrameStep'Delta DeltaSeconds -- ^ How much delta to carry over into the next frame.
@@ -164,12 +164,12 @@ stepFrame Frame{fDelay} Position{pCounter} delta =
     then FrameStep'Delta $ pCounter + delta - fDelay
     else FrameStep'Counter $ pCounter + delta
 
--- | Step through the animation resulting in a new position.
-stepAnimation :: Key key => Animations key loc -> Position key -> DeltaSeconds -> Position key
-stepAnimation as p d =
+-- | Step through the animation resulting a new position.
+stepPosition :: Key key => Animations key loc -> Position key -> DeltaSeconds -> Position key
+stepPosition as p d =
   case frameStep of
     FrameStep'Counter counter -> p{pCounter = counter }
-    FrameStep'Delta delta -> stepAnimation as p' delta
+    FrameStep'Delta delta -> stepPosition as p' delta
   where
     frameStep = stepFrame f p d
     fs = unAnimations as V.! fromEnum (pKey p)

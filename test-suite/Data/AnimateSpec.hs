@@ -27,21 +27,21 @@ spec = do
       let expected = 0.2
       actual `shouldSatisfy` (\(FrameStep'Delta actual') -> 1e6 > abs (actual' - expected))
 
-  describe "stepAnimation" $ do
+  describe "stepPosition" $ do
     let getFrames Ani'Stand = [Frame 'a' 0.2, Frame 'b' 0.2]
         getFrames Ani'Walk = [Frame 'c' 0.2, Frame 'd' 0.2]
     let as = animations getFrames
     let p = Position { pKey = Ani'Stand, pFrameIndex = 0, pCounter = 0, pLoop = Loop'Always }
     it "should do nothing if given 0 delta seconds" $ do
-      stepAnimation as p 0 `shouldBe` p
+      stepPosition as p 0 `shouldBe` p
     it "should go to the next frame" $ do
-      stepAnimation as p 0.2 `shouldBe` p { pFrameIndex = 1, pCounter = 0 }
+      stepPosition as p 0.2 `shouldBe` p { pFrameIndex = 1, pCounter = 0 }
     it "should loop to the start" $ do
-      stepAnimation as p 0.4 `shouldBe` p { pFrameIndex = 0, pCounter = 0 }
+      stepPosition as p 0.4 `shouldBe` p { pFrameIndex = 0, pCounter = 0 }
     it "should loop once" $ do
-      stepAnimation as p{ pLoop = Loop'Count 1 } 0.4 `shouldBe` p { pFrameIndex = 0, pCounter = 0, pLoop = Loop'Count 0 }
+      stepPosition as p{ pLoop = Loop'Count 1 } 0.4 `shouldBe` p { pFrameIndex = 0, pCounter = 0, pLoop = Loop'Count 0 }
     it "should not loop" $ do
-      stepAnimation as p{ pLoop = Loop'Count 0 } 0.4 `shouldBe` p { pFrameIndex = 1, pCounter = 0, pLoop = Loop'Count (-1) }
+      stepPosition as p{ pLoop = Loop'Count 0 } 0.4 `shouldBe` p { pFrameIndex = 1, pCounter = 0, pLoop = Loop'Count (-1) }
 
   describe "isAnimationComplete" $ do
     let getFrames Ani'Stand = [Frame 'a' 0.2, Frame 'b' 0.2]

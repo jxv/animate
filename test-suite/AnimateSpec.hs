@@ -1,9 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
-module Data.AnimateSpec where
+module AnimateSpec where
 
 import qualified Data.Vector as V
 import Test.Hspec
-import Data.Animate
+import Animate
 
 data Ani = Ani'Stand | Ani'Walk
   deriving (Show, Eq, Enum, Ord, Bounded)

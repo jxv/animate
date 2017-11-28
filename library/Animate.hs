@@ -1,4 +1,4 @@
-module Data.Animate
+module Animate
   ( Seconds
   , DeltaSeconds
   , Color
@@ -225,7 +225,7 @@ prevKey key = if key == minBound then maxBound else pred key
 -- | Simple function diff'ing the position for loop change
 positionHasLooped
   :: Position key -- ^ Previous
-  -> Position a -- ^ Next
+  -> Position key -- ^ Next
   -> Bool
 positionHasLooped Position{ pLoop = Loop'Count c } Position{ pLoop = Loop'Count c' } = c > c'
 positionHasLooped Position{ pLoop = Loop'Always } _ = False

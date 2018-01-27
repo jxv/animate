@@ -1,10 +1,11 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Animate
   ( Seconds
   , DeltaSeconds
   , Color
   , FrameIndex
   , Frame(..)
-  , Animations
+  , Animations(..)
   , Loop(..)
   , Position(..)
   , FrameStep(..)
@@ -39,6 +40,7 @@ import Data.Aeson (FromJSON(..), ToJSON(..), (.:), eitherDecode, object, (.=), V
 import Data.Map (Map)
 import Data.Word (Word8)
 import Data.Text (Text)
+import GHC.Generics (Generic)
 
 -- | Avoided newtype wrapper for convenience
 type Seconds = Float
@@ -54,13 +56,13 @@ type FrameIndex = Int
 data Frame loc = Frame
   { fLocation :: loc -- ^ User defined reference to the location of a sprite. For example, a sprite sheet clip.
   , fDelay :: Seconds -- ^ Minimium amount of time for the frame to last.
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
 
--- | Type safe animation set. Use an sum type with an `Enum` and `Bounded` instance for the animation, 'a'.
+-- | Type safe animation set. Use a sum type with an `Enum` and `Bounded` instance for the animation, @a@.
 newtype Animations key loc = Animations { unAnimations :: V.Vector (V.Vector (Frame loc)) }
   deriving (Show, Eq)
 
--- | Sematically for an animation key constraint
+-- | Semantically for an animation key constraint
 class (Ord key, Bounded key, Enum key) => Key key
 
 -- | Animation Keyframe. `keyName` is used for JSON parsing.
@@ -74,7 +76,7 @@ data SpriteClip = SpriteClip
   , scW :: Int
   , scH :: Int
   , scOffset :: Maybe (Int, Int)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
 
 instance ToJSON SpriteClip where
   toJSON SpriteClip{scX,scY,scW,scH,scOffset} = case scOffset of
@@ -95,16 +97,16 @@ instance FromJSON SpriteClip where
 data SpriteSheet key img = SpriteSheet
   { ssAnimations :: Animations key SpriteClip
   , ssImage :: img
-  }
+  } deriving (Generic)
 
 -- | One way to represent sprite sheet information.
--- | JSON loading is included.
+--   JSON loading is included.
 data SpriteSheetInfo = SpriteSheetInfo
   { ssiImage :: FilePath
   , ssiAlpha :: Maybe Color
   , ssiClips :: [SpriteClip]
   , ssiAnimations :: Map Text [(FrameIndex, Seconds)]
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
 
 instance ToJSON SpriteSheetInfo where
   toJSON SpriteSheetInfo{ssiImage,ssiAlpha,ssiClips,ssiAnimations} = object
@@ -134,16 +136,17 @@ framesByAnimation (Animations as) k = as V.! fromEnum k
 data Loop
   = Loop'Always -- ^ Never stop looping. Animation can never be completed.
   | Loop'Count Int -- ^ Count down loops to below zero. 0 = no loop. 1 = one loop. 2 = two loops. etc.
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 -- | State for progression through an animation
--- | `example = Position minBound 0 0 Loop'Always`
+--
+-- > example = Position minBound 0 0 Loop'Always
 data Position key = Position
   { pKey :: key -- ^ Index for the animation.
   , pFrameIndex :: FrameIndex -- ^ Index wihin the animation. WARNING: Modifying to below zero or equal-to-or-greater-than-the-frame-count will throw out of bounds errors.
   , pCounter :: Seconds -- ^ Accumulated seconds to end of the frame. Will continue to compound if animation is completed.
   , pLoop :: Loop -- ^ How to loop through an animation. Loop'Count is a count down.
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
 
 -- | New `Position` with its animation key to loop forever
 initPosition :: Key key => key -> Position key
@@ -166,7 +169,7 @@ initPositionWithLoop key loop = Position
 data FrameStep
   = FrameStep'Counter Seconds -- ^ New counter to compare against the frame's delay.
   | FrameStep'Delta DeltaSeconds -- ^ How much delta to carry over into the next frame.
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 -- | Intermediate function for how a frame should be step through.
 stepFrame :: Frame loc -> Position key -> DeltaSeconds -> FrameStep
@@ -214,15 +217,15 @@ isAnimationComplete as p = case pLoop p of
     lastIndex = V.length frames - 1
     lastFrame = frames V.! lastIndex
 
--- | Cycle through the next animation key
+-- | Cycle through the next animation key.
 nextKey :: Key key => key -> key
 nextKey key = if key == maxBound then minBound else succ key
 
--- | Cycle through the previous animation key
+-- | Cycle through the previous animation key.
 prevKey :: Key key => key -> key
 prevKey key = if key == minBound then maxBound else pred key
 
--- | Simple function diff'ing the position for loop change
+-- | Simple function diff'ing the position for loop change.
 positionHasLooped
   :: Position key -- ^ Previous
   -> Position key -- ^ Next
@@ -232,7 +235,7 @@ positionHasLooped Position{ pLoop = Loop'Always } _ = False
 positionHasLooped _ Position{ pLoop = Loop'Always } = False
 
 -- | Quick function for loading `SpriteSheetInfo`.
--- | Check the example.
+--   Check the example.
 readSpriteSheetInfoJSON
   :: FilePath -- ^ Path of the sprite sheet info JSON file
   -> IO SpriteSheetInfo
@@ -242,11 +245,11 @@ readSpriteSheetInfoJSON path = do
     Left _err -> error $ "Cannot parse Sprite Sheet Info \"" ++ path ++ "\""
     Right ssi -> return ssi
 
--- | Quick function for loading `SpriteSheetInfo`, then using it to load its image for a `SpriteSheet`
--- | Check the example.
+-- | Quick function for loading `SpriteSheetInfo`, then using it to load its image for a `SpriteSheet`.
+--   Check the example.
 readSpriteSheetJSON
   :: KeyName key
-  => (FilePath -> Maybe Color -> IO img) -- ^ Inject animage loading function
+  => (FilePath -> Maybe Color -> IO img) -- ^ Inject an image loading function
   -> FilePath -- ^ Path of the sprite sheet info JSON file
   -> IO (SpriteSheet key img)
 readSpriteSheetJSON loadImage infoPath = do

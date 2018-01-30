@@ -1,8 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Animate
-  ( Seconds
-  , DeltaSeconds
-  , Color
+  ( Color
   , FrameIndex
   , Frame(..)
   , Animations(..)
@@ -42,24 +40,18 @@ import Data.Word (Word8)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
--- | Avoided newtype wrapper for convenience
-type Seconds = Float
-
--- | Type aliased seconds
-type DeltaSeconds = Seconds
-
 -- | Alias for RGB (8bit, 8bit, 8bit)
 type Color = (Word8, Word8, Word8)
 
 type FrameIndex = Int
 
-data Frame loc = Frame
+data Frame loc delay = Frame
   { fLocation :: loc -- ^ User defined reference to the location of a sprite. For example, a sprite sheet clip.
-  , fDelay :: Seconds -- ^ Minimium amount of time for the frame to last.
+  , fDelay :: delay -- ^ Minimium amount of units for the frame to last.
   } deriving (Show, Eq, Generic)
 
 -- | Type safe animation set. Use a sum type with an `Enum` and `Bounded` instance for the animation, @a@.
-newtype Animations key loc = Animations { unAnimations :: V.Vector (V.Vector (Frame loc)) }
+newtype Animations key loc delay = Animations { unAnimations :: V.Vector (V.Vector (Frame loc delay)) }
   deriving (Show, Eq)
 
 -- | Semantically for an animation key constraint
@@ -94,21 +86,21 @@ instance FromJSON SpriteClip where
       return SpriteClip { scX = x, scY = y, scW = w, scH = h, scOffset = Just (ofsX, ofsY) })
 
 -- | Generalized sprite sheet data structure
-data SpriteSheet key img = SpriteSheet
-  { ssAnimations :: Animations key SpriteClip
+data SpriteSheet key img delay = SpriteSheet
+  { ssAnimations :: Animations key SpriteClip delay
   , ssImage :: img
   } deriving (Generic)
 
 -- | One way to represent sprite sheet information.
 --   JSON loading is included.
-data SpriteSheetInfo = SpriteSheetInfo
+data SpriteSheetInfo delay = SpriteSheetInfo
   { ssiImage :: FilePath
   , ssiAlpha :: Maybe Color
   , ssiClips :: [SpriteClip]
-  , ssiAnimations :: Map Text [(FrameIndex, Seconds)]
+  , ssiAnimations :: Map Text [(FrameIndex, delay)]
   } deriving (Show, Eq, Generic)
 
-instance ToJSON SpriteSheetInfo where
+instance ToJSON delay => ToJSON (SpriteSheetInfo delay) where
   toJSON SpriteSheetInfo{ssiImage,ssiAlpha,ssiClips,ssiAnimations} = object
     [ "image" .= ssiImage
     , "alpha" .= ssiAlpha
@@ -116,7 +108,7 @@ instance ToJSON SpriteSheetInfo where
     , "animations" .= ssiAnimations
     ]
 
-instance FromJSON SpriteSheetInfo where
+instance FromJSON delay => FromJSON (SpriteSheetInfo delay) where
   parseJSON (Object o) = do
     image <- o .: "image"
     alpha <- o .: "alpha"
@@ -126,11 +118,11 @@ instance FromJSON SpriteSheetInfo where
   parseJSON _ = mzero
 
 -- | Generate animations given each constructor
-animations :: Key key => (key -> [Frame loc]) -> Animations key loc
+animations :: Key key => (key -> [Frame loc delay]) -> Animations key loc delay
 animations getFrames = Animations $ V.fromList $ map (V.fromList . getFrames) [minBound..maxBound]
 
 -- | Lookup the frames of an animation
-framesByAnimation :: Key key => Animations key loc -> key -> V.Vector (Frame loc)
+framesByAnimation :: Key key => Animations key loc delay -> key -> V.Vector (Frame loc delay)
 framesByAnimation (Animations as) k = as V.! fromEnum k
 
 data Loop
@@ -141,23 +133,23 @@ data Loop
 -- | State for progression through an animation
 --
 -- > example = Position minBound 0 0 Loop'Always
-data Position key = Position
+data Position key delay = Position
   { pKey :: key -- ^ Index for the animation.
   , pFrameIndex :: FrameIndex -- ^ Index wihin the animation. WARNING: Modifying to below zero or equal-to-or-greater-than-the-frame-count will throw out of bounds errors.
-  , pCounter :: Seconds -- ^ Accumulated seconds to end of the frame. Will continue to compound if animation is completed.
+  , pCounter :: delay -- ^ Accumulated units to end of the frame. Will continue to compound if animation is completed.
   , pLoop :: Loop -- ^ How to loop through an animation. Loop'Count is a count down.
   } deriving (Show, Eq, Generic)
 
 -- | New `Position` with its animation key to loop forever
-initPosition :: Key key => key -> Position key
+initPosition :: (Num delay, Key key) => key -> Position key delay
 initPosition key = initPositionWithLoop key Loop'Always
 
 -- | New `Position` with its animation key with a limited loop
-initPositionLoops :: Key key => key -> Int -> Position key
+initPositionLoops :: (Num delay, Key key) => key -> Int -> Position key delay
 initPositionLoops key count = initPositionWithLoop key (Loop'Count count)
 
 -- | New `Position`
-initPositionWithLoop :: Key key => key -> Loop -> Position key
+initPositionWithLoop :: (Num delay, Key key) => key -> Loop -> Position key delay
 initPositionWithLoop key loop = Position
   { pKey = key
   , pFrameIndex = 0
@@ -166,20 +158,20 @@ initPositionWithLoop key loop = Position
   }
 
 -- | You can ignore. An intermediate type for `stepPosition` to judge how to increment the current frame.
-data FrameStep
-  = FrameStep'Counter Seconds -- ^ New counter to compare against the frame's delay.
-  | FrameStep'Delta DeltaSeconds -- ^ How much delta to carry over into the next frame.
+data FrameStep delay
+  = FrameStep'Counter delay -- ^ New counter to compare against the frame's delay.
+  | FrameStep'Delta delay -- ^ How much delta to carry over into the next frame.
   deriving (Show, Eq, Generic)
 
 -- | Intermediate function for how a frame should be step through.
-stepFrame :: Frame loc -> Position key -> DeltaSeconds -> FrameStep
+stepFrame :: (Num delay, Ord delay) => Frame loc delay -> Position key delay -> delay -> FrameStep delay
 stepFrame Frame{fDelay} Position{pCounter} delta =
   if pCounter + delta >= fDelay
     then FrameStep'Delta $ pCounter + delta - fDelay
     else FrameStep'Counter $ pCounter + delta
 
 -- | Step through the animation resulting a new position.
-stepPosition :: Key key => Animations key loc -> Position key -> DeltaSeconds -> Position key
+stepPosition :: (Num delay, Ord delay, Key key) => Animations key loc delay -> Position key delay -> delay -> Position key delay
 stepPosition as p d =
   case frameStep of
     FrameStep'Counter counter -> p{pCounter = counter }
@@ -199,16 +191,16 @@ stepPosition as p d =
           , pLoop = Loop'Count n' }
 
 -- | Use the position to find the current frame of the animation.
-currentFrame :: Key key => Animations key loc -> Position key -> Frame loc
+currentFrame :: (Num delay, Key key) => Animations key loc delay -> Position key delay -> Frame loc delay
 currentFrame anis Position{pKey,pFrameIndex} = (framesByAnimation anis pKey) V.! pFrameIndex
 
 -- | Use the position to find the current location, lik a sprite sheet clip, of the animation.
-currentLocation :: Key key => Animations key loc -> Position key -> loc
+currentLocation :: (Num delay, Key key) => Animations key loc delay -> Position key delay -> loc
 currentLocation anis p = fLocation (currentFrame anis p)
 
 -- | The animation has finished all its frames. Useful for signalling into switching to another animation.
 --   With a Loop'Always, the animation will never be completed.
-isAnimationComplete :: Key key => Animations key loc -> Position key -> Bool
+isAnimationComplete :: (Key key, Num delay, Ord delay) => Animations key loc delay -> Position key delay -> Bool
 isAnimationComplete as p = case pLoop p of
   Loop'Always -> False
   Loop'Count n -> n < 0 && pFrameIndex p == lastIndex && pCounter p >= fDelay lastFrame
@@ -227,8 +219,8 @@ prevKey key = if key == minBound then maxBound else pred key
 
 -- | Simple function diff'ing the position for loop change.
 positionHasLooped
-  :: Position key -- ^ Previous
-  -> Position key -- ^ Next
+  :: Position key delay -- ^ Previous
+  -> Position key delay -- ^ Next
   -> Bool
 positionHasLooped Position{ pLoop = Loop'Count c } Position{ pLoop = Loop'Count c' } = c > c'
 positionHasLooped Position{ pLoop = Loop'Always } _ = False
@@ -237,8 +229,9 @@ positionHasLooped _ Position{ pLoop = Loop'Always } = False
 -- | Quick function for loading `SpriteSheetInfo`.
 --   Check the example.
 readSpriteSheetInfoJSON
-  :: FilePath -- ^ Path of the sprite sheet info JSON file
-  -> IO SpriteSheetInfo
+  :: FromJSON delay
+  => FilePath -- ^ Path of the sprite sheet info JSON file
+  -> IO (SpriteSheetInfo delay)
 readSpriteSheetInfoJSON path = do
   metaBytes <- BL.readFile path
   case eitherDecode metaBytes of
@@ -248,10 +241,10 @@ readSpriteSheetInfoJSON path = do
 -- | Quick function for loading `SpriteSheetInfo`, then using it to load its image for a `SpriteSheet`.
 --   Check the example.
 readSpriteSheetJSON
-  :: KeyName key
+  :: (KeyName key, FromJSON delay)
   => (FilePath -> Maybe Color -> IO img) -- ^ Inject an image loading function
   -> FilePath -- ^ Path of the sprite sheet info JSON file
-  -> IO (SpriteSheet key img)
+  -> IO (SpriteSheet key img delay)
 readSpriteSheetJSON loadImage infoPath = do
   SpriteSheetInfo{ssiImage, ssiClips, ssiAnimations, ssiAlpha} <- readSpriteSheetInfoJSON infoPath
   i <- loadImage ssiImage ssiAlpha

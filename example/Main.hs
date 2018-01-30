@@ -42,7 +42,7 @@ main = do
   window <- SDL.createWindow "Animate Example" SDL.defaultWindow { SDL.windowInitialSize = V2 320 180 }
   SDL.showWindow window
   screen <- SDL.getWindowSurface window
-  spriteSheet <- Animate.readSpriteSheetJSON loadSurface "dino.json" :: IO (Animate.SpriteSheet DinoKey SDL.Surface)
+  spriteSheet <- Animate.readSpriteSheetJSON loadSurface "dino.json" :: IO (Animate.SpriteSheet DinoKey SDL.Surface Float)
   loop window screen spriteSheet (Animate.initPosition DinoKey'Idle)
   SDL.destroyWindow window
   SDL.quit
@@ -55,7 +55,7 @@ detectSpacePressed event = case event of
     not repeated
   _ -> False
 
-loop :: SDL.Window -> SDL.Surface -> Animate.SpriteSheet DinoKey SDL.Surface -> Animate.Position DinoKey -> IO ()
+loop :: SDL.Window -> SDL.Surface -> Animate.SpriteSheet DinoKey SDL.Surface Float -> Animate.Position DinoKey Float -> IO ()
 loop window screen ss@Animate.SpriteSheet{ssAnimations, ssImage} pos = do
   events <- map SDL.eventPayload <$> SDL.pollEvents
   let quit = elem SDL.QuitEvent events

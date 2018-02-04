@@ -18,7 +18,6 @@ data DinoKey
   | DinoKey'Sneak
   deriving (Show, Eq, Ord, Bounded, Enum)
 
-instance Animate.Key DinoKey
 instance Animate.KeyName DinoKey where
   keyName = \case
     DinoKey'Idle -> "Idle"

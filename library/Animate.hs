@@ -7,7 +7,6 @@ module Animate
   , Loop(..)
   , Position(..)
   , FrameStep(..)
-  , Key
   , KeyName(..)
   , SpriteClip(..)
   , SpriteSheet(..)
@@ -54,11 +53,10 @@ data Frame loc delay = Frame
 newtype Animations key loc delay = Animations { unAnimations :: V.Vector (V.Vector (Frame loc delay)) }
   deriving (Show, Eq)
 
--- | Semantically for an animation key constraint
-class (Ord key, Bounded key, Enum key) => Key key
+-- class (Ord key, Bounded key, Enum key) => Key key
 
 -- | Animation Keyframe. `keyName` is used for JSON parsing.
-class Key key => KeyName key where
+class KeyName key where
   keyName :: key -> Text
 
 -- | Describe the boxed area of the 2d sprite inside a sprite sheet
@@ -118,11 +116,11 @@ instance FromJSON delay => FromJSON (SpriteSheetInfo delay) where
   parseJSON _ = mzero
 
 -- | Generate animations given each constructor
-animations :: Key key => (key -> [Frame loc delay]) -> Animations key loc delay
+animations :: (Enum key, Bounded key) => (key -> [Frame loc delay]) -> Animations key loc delay
 animations getFrames = Animations $ V.fromList $ map (V.fromList . getFrames) [minBound..maxBound]
 
 -- | Lookup the frames of an animation
-framesByAnimation :: Key key => Animations key loc delay -> key -> V.Vector (Frame loc delay)
+framesByAnimation :: Enum key => Animations key loc delay -> key -> V.Vector (Frame loc delay)
 framesByAnimation (Animations as) k = as V.! fromEnum k
 
 data Loop
@@ -141,15 +139,15 @@ data Position key delay = Position
   } deriving (Show, Eq, Generic)
 
 -- | New `Position` with its animation key to loop forever
-initPosition :: (Num delay, Key key) => key -> Position key delay
+initPosition :: (Num delay) => key -> Position key delay
 initPosition key = initPositionWithLoop key Loop'Always
 
 -- | New `Position` with its animation key with a limited loop
-initPositionLoops :: (Num delay, Key key) => key -> Int -> Position key delay
+initPositionLoops :: (Num delay) => key -> Int -> Position key delay
 initPositionLoops key count = initPositionWithLoop key (Loop'Count count)
 
 -- | New `Position`
-initPositionWithLoop :: (Num delay, Key key) => key -> Loop -> Position key delay
+initPositionWithLoop :: (Num delay) => key -> Loop -> Position key delay
 initPositionWithLoop key loop = Position
   { pKey = key
   , pFrameIndex = 0
@@ -171,7 +169,7 @@ stepFrame Frame{fDelay} Position{pCounter} delta =
     else FrameStep'Counter $ pCounter + delta
 
 -- | Step through the animation resulting a new position.
-stepPosition :: (Num delay, Ord delay, Key key) => Animations key loc delay -> Position key delay -> delay -> Position key delay
+stepPosition :: (Enum key, Num delay, Ord delay) => Animations key loc delay -> Position key delay -> delay -> Position key delay
 stepPosition as p d =
   case frameStep of
     FrameStep'Counter counter -> p{pCounter = counter }
@@ -191,16 +189,16 @@ stepPosition as p d =
           , pLoop = Loop'Count n' }
 
 -- | Use the position to find the current frame of the animation.
-currentFrame :: (Num delay, Key key) => Animations key loc delay -> Position key delay -> Frame loc delay
+currentFrame :: (Enum key, Num delay) => Animations key loc delay -> Position key delay -> Frame loc delay
 currentFrame anis Position{pKey,pFrameIndex} = (framesByAnimation anis pKey) V.! pFrameIndex
 
 -- | Use the position to find the current location, lik a sprite sheet clip, of the animation.
-currentLocation :: (Num delay, Key key) => Animations key loc delay -> Position key delay -> loc
+currentLocation :: (Enum key, Num delay) => Animations key loc delay -> Position key delay -> loc
 currentLocation anis p = fLocation (currentFrame anis p)
 
 -- | The animation has finished all its frames. Useful for signalling into switching to another animation.
 --   With a Loop'Always, the animation will never be completed.
-isAnimationComplete :: (Key key, Num delay, Ord delay) => Animations key loc delay -> Position key delay -> Bool
+isAnimationComplete :: (Enum key, Num delay, Ord delay) => Animations key loc delay -> Position key delay -> Bool
 isAnimationComplete as p = case pLoop p of
   Loop'Always -> False
   Loop'Count n -> n < 0 && pFrameIndex p == lastIndex && pCounter p >= fDelay lastFrame
@@ -210,11 +208,11 @@ isAnimationComplete as p = case pLoop p of
     lastFrame = frames V.! lastIndex
 
 -- | Cycle through the next animation key.
-nextKey :: Key key => key -> key
+nextKey :: (Bounded key, Enum key, Eq key) => key -> key
 nextKey key = if key == maxBound then minBound else succ key
 
 -- | Cycle through the previous animation key.
-prevKey :: Key key => key -> key
+prevKey :: (Bounded key, Enum key, Eq key) => key -> key
 prevKey key = if key == minBound then maxBound else pred key
 
 -- | Simple function diff'ing the position for loop change.
@@ -241,7 +239,7 @@ readSpriteSheetInfoJSON path = do
 -- | Quick function for loading `SpriteSheetInfo`, then using it to load its image for a `SpriteSheet`.
 --   Check the example.
 readSpriteSheetJSON
-  :: (KeyName key, FromJSON delay)
+  :: (KeyName key, Ord key, Bounded key, Enum key, FromJSON delay)
   => (FilePath -> Maybe Color -> IO img) -- ^ Inject an image loading function
   -> FilePath -- ^ Path of the sprite sheet info JSON file
   -> IO (SpriteSheet key img delay)

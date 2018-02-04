@@ -1,5 +1,5 @@
 name: animate-example
-version: '0.0.0'
+version: '0.1.0'
 category: Game
 synopsis: Animation for sprites
 description: Prototypical sprite animation with type-safety.
@@ -8,6 +8,8 @@ extra-source-files:
 - package.yaml
 - README.md
 - stack.yaml
+- dino.json
+- dino.png
 ghc-options: -Wall
 default-extensions:
 - DuplicateRecordFields

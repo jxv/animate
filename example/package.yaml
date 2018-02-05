@@ -1,5 +1,5 @@
 name: animate-example
-version: '0.1.0'
+version: '0.2.0'
 category: Game
 synopsis: Animation for sprites
 description: Prototypical sprite animation with type-safety.

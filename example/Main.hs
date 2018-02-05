@@ -72,7 +72,7 @@ loop window screen ss@Animate.SpriteSheet{ssAnimations, ssImage} pos = do
     frameDeltaSeconds = 0.016667
     frameDeltaMilliseconds = 16
 
-rectFromClip :: Animate.SpriteClip -> SDL.Rectangle CInt
+rectFromClip :: Animate.SpriteClip key -> SDL.Rectangle CInt
 rectFromClip Animate.SpriteClip{scX,scY,scW,scH} = SDL.Rectangle (SDL.P (V2 (num scX) (num scY))) (V2 (num scW) (num scH))
   where
     num = fromIntegral

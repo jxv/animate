@@ -60,7 +60,7 @@ class KeyName key where
   keyName :: key -> Text
 
 -- | Describe the boxed area of the 2d sprite inside a sprite sheet
-data SpriteClip = SpriteClip
+data SpriteClip key = SpriteClip
   { scX :: Int
   , scY :: Int
   , scW :: Int
@@ -68,12 +68,12 @@ data SpriteClip = SpriteClip
   , scOffset :: Maybe (Int, Int)
   } deriving (Show, Eq, Generic)
 
-instance ToJSON SpriteClip where
+instance ToJSON (SpriteClip key) where
   toJSON SpriteClip{scX,scY,scW,scH,scOffset} = case scOffset of
     Nothing -> toJSON (scX, scY, scW, scH)
     Just (ofsX, ofsY) -> toJSON (scX, scY, scW, scH, ofsX, ofsY)
 
-instance FromJSON SpriteClip where
+instance FromJSON (SpriteClip key) where
   parseJSON v =
     (do
       (x,y,w,h) <- parseJSON v
@@ -85,20 +85,20 @@ instance FromJSON SpriteClip where
 
 -- | Generalized sprite sheet data structure
 data SpriteSheet key img delay = SpriteSheet
-  { ssAnimations :: Animations key SpriteClip delay
+  { ssAnimations :: Animations key (SpriteClip key) delay
   , ssImage :: img
   } deriving (Generic)
 
 -- | One way to represent sprite sheet information.
 --   JSON loading is included.
-data SpriteSheetInfo delay = SpriteSheetInfo
+data SpriteSheetInfo key delay = SpriteSheetInfo
   { ssiImage :: FilePath
   , ssiAlpha :: Maybe Color
-  , ssiClips :: [SpriteClip]
+  , ssiClips :: [SpriteClip key]
   , ssiAnimations :: Map Text [(FrameIndex, delay)]
   } deriving (Show, Eq, Generic)
 
-instance ToJSON delay => ToJSON (SpriteSheetInfo delay) where
+instance ToJSON delay => ToJSON (SpriteSheetInfo key delay) where
   toJSON SpriteSheetInfo{ssiImage,ssiAlpha,ssiClips,ssiAnimations} = object
     [ "image" .= ssiImage
     , "alpha" .= ssiAlpha
@@ -106,7 +106,7 @@ instance ToJSON delay => ToJSON (SpriteSheetInfo delay) where
     , "animations" .= ssiAnimations
     ]
 
-instance FromJSON delay => FromJSON (SpriteSheetInfo delay) where
+instance FromJSON delay => FromJSON (SpriteSheetInfo key delay) where
   parseJSON (Object o) = do
     image <- o .: "image"
     alpha <- o .: "alpha"
@@ -229,7 +229,7 @@ positionHasLooped _ Position{ pLoop = Loop'Always } = False
 readSpriteSheetInfoJSON
   :: FromJSON delay
   => FilePath -- ^ Path of the sprite sheet info JSON file
-  -> IO (SpriteSheetInfo delay)
+  -> IO (SpriteSheetInfo key delay)
 readSpriteSheetInfoJSON path = do
   metaBytes <- BL.readFile path
   case eitherDecode metaBytes of

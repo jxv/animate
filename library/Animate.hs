@@ -25,12 +25,15 @@ module Animate
   , nextKey
   , prevKey
   , readSpriteSheetInfoJSON
+  , readSpriteSheetInfoYAML
   , readSpriteSheetJSON
+  , readSpriteSheetYAML
   ) where
 
 import qualified Data.Vector as V (Vector, (!), length, fromList)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.Yaml as Y
 import Control.Applicative ((<|>))
 import Control.Monad (mzero)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.:), eitherDecode, object, (.=), Value(..))
@@ -230,9 +233,25 @@ readSpriteSheetInfoJSON
   :: FromJSON delay
   => FilePath -- ^ Path of the sprite sheet info JSON file
   -> IO (SpriteSheetInfo key delay)
-readSpriteSheetInfoJSON path = do
+readSpriteSheetInfoJSON = readSpriteSheetInfo eitherDecode
+
+readSpriteSheetInfoYAML
+  :: FromJSON delay
+  => FilePath -- ^ Path of the sprite sheet info JSON file
+  -> IO (SpriteSheetInfo key delay)
+readSpriteSheetInfoYAML = readSpriteSheetInfo eitherDecodeYAML
+
+eitherDecodeYAML :: FromJSON a => BL.ByteString -> Either String a
+eitherDecodeYAML = Y.decodeEither . BL.toStrict
+
+readSpriteSheetInfo
+  :: FromJSON delay
+  => (BL.ByteString -> Either String (SpriteSheetInfo key delay))
+  -> FilePath -- ^ Path of the sprite sheet info JSON file
+  -> IO (SpriteSheetInfo key delay)
+readSpriteSheetInfo decoder path = do
   metaBytes <- BL.readFile path
-  case eitherDecode metaBytes of
+  case decoder metaBytes of
     Left _err -> error $ "Cannot parse Sprite Sheet Info \"" ++ path ++ "\""
     Right ssi -> return ssi
 
@@ -243,8 +262,23 @@ readSpriteSheetJSON
   => (FilePath -> Maybe Color -> IO img) -- ^ Inject an image loading function
   -> FilePath -- ^ Path of the sprite sheet info JSON file
   -> IO (SpriteSheet key img delay)
-readSpriteSheetJSON loadImage infoPath = do
-  SpriteSheetInfo{ssiImage, ssiClips, ssiAnimations, ssiAlpha} <- readSpriteSheetInfoJSON infoPath
+readSpriteSheetJSON = readSpriteSheet eitherDecode
+
+readSpriteSheetYAML
+  :: (KeyName key, Ord key, Bounded key, Enum key, FromJSON delay)
+  => (FilePath -> Maybe Color -> IO img) -- ^ Inject an image loading function
+  -> FilePath -- ^ Path of the sprite sheet info JSON file
+  -> IO (SpriteSheet key img delay)
+readSpriteSheetYAML = readSpriteSheet eitherDecodeYAML
+
+readSpriteSheet
+  :: (KeyName key, Ord key, Bounded key, Enum key, FromJSON delay)
+  => (BL.ByteString -> Either String (SpriteSheetInfo key delay))
+  -> (FilePath -> Maybe Color -> IO img)
+  -> FilePath
+  -> IO (SpriteSheet key img delay)
+readSpriteSheet decoder loadImage infoPath = do
+  SpriteSheetInfo{ssiImage, ssiClips, ssiAnimations, ssiAlpha} <- readSpriteSheetInfo decoder infoPath
   i <- loadImage ssiImage ssiAlpha
   let frame key = (key, map (\a -> Frame (ssiClips !! fst a) (snd a)) (ssiAnimations Map.! keyName key))
   let animationMap = Map.fromList $ map frame [minBound..maxBound]

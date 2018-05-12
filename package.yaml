@@ -1,5 +1,5 @@
 name: animate
-version: '0.6.0'
+version: '0.6.1'
 category: Game
 synopsis: Animation for sprites
 description: Prototypical sprite animation with type-safety.
@@ -26,6 +26,7 @@ library:
   - containers
   - text
   - vector
+  - yaml
   source-dirs: library
 tests:
   animate-test-suite:

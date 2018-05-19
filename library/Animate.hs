@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DefaultSignatures #-}
 module Animate
   ( Color
   , FrameIndex
@@ -39,8 +40,9 @@ import Control.Monad (mzero)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.:), eitherDecode, object, (.=), Value(..))
 import Data.Map (Map)
 import Data.Word (Word8)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import GHC.Generics (Generic)
+
 
 -- | Alias for RGB (8bit, 8bit, 8bit)
 type Color = (Word8, Word8, Word8)
@@ -61,6 +63,11 @@ newtype Animations key loc delay = Animations { unAnimations :: V.Vector (V.Vect
 -- | Animation Keyframe. `keyName` is used for JSON parsing.
 class KeyName key where
   keyName :: key -> Text
+  default keyName :: Show key => key -> Text
+  keyName = pack . dropTickPrefix . show
+    where
+      dropTickPrefix :: String -> String
+      dropTickPrefix = drop 1 . dropWhile (/= '\'')
 
 -- | Describe the boxed area of the 2d sprite inside a sprite sheet
 data SpriteClip key = SpriteClip

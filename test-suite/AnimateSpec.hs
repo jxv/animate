@@ -8,7 +8,7 @@ import Animate
 data Ani = Ani'Stand | Ani'Walk
   deriving (Show, Eq, Enum, Ord, Bounded)
 
-instance Key Ani
+instance KeyName Ani
 
 spec :: Spec
 spec = do
